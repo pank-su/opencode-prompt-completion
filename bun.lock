@@ -15,15 +15,10 @@
         "typescript": "5.8.2",
       },
       "peerDependencies": {
-        "@opentui/core": ">=0.5.17 <0.6",
-        "@opentui/solid": ">=0.5.17 <0.6",
-        "solid-js": ">=1.9.0 <2",
+        "@opentui/core": "0.5.17",
+        "@opentui/solid": "0.5.17",
+        "solid-js": "1.9.12",
       },
-      "optionalPeers": [
-        "@opentui/core",
-        "@opentui/solid",
-        "solid-js",
-      ],
     },
   },
   "packages": {

@@ -8,7 +8,7 @@ import { testTheme } from './fixtures/theme';
 
 let mountedContext;
 mock.module('@opencode/plugin/tui', () => ({ Plugin: { define: (value) => value }, usePlugin: () => mountedContext }));
-const { default: plugin } = await import('../src/tui');
+const { default: plugin } = await import('../tui');
 const pause = (ms = 150) => new Promise((resolve) => setTimeout(resolve, ms));
 const wordModifiers = process.platform === 'darwin' ? { meta: true } : { ctrl: true };
 
@@ -283,6 +283,36 @@ test.each(['light', 'dark'])('inline suffix is virtual until real Tab accepts it
     }
 });
 
+test.each([
+    'other/vendor/small#low',
+    { providerID: 'other', model: 'vendor/small', variant: 'low' },
+    { providerID: 'other', id: 'vendor/small', variant: 'low' },
+])('explicit prediction selector reaches generate.text without switching the session model: %j', async (predictionModel) => {
+    const f = await fixture('dark', { predictionModel });
+    try {
+        f.editor.insertText('Check');
+        await f.ui.renderOnce();
+        await pause();
+        expect(f.requests).toHaveLength(1);
+        expect(f.requests[0].input.model).toEqual({ providerID: 'other', id: 'vendor/small', variant: 'low' });
+        expect(f.context.ui.model.current()).toEqual({ providerID: 'openai', modelID: 'fast', variant: 'high' });
+    } finally {
+        f.stop();
+    }
+});
+
+test('an invalid explicit model blocks prediction instead of using the session model', async () => {
+    const f = await fixture('dark', { predictionModel: 'invalid-selector' });
+    try {
+        f.editor.insertText('Check');
+        await f.ui.renderOnce();
+        await pause();
+        expect(f.requests).toHaveLength(0);
+    } finally {
+        f.stop();
+    }
+});
+
 test('matching typing and backspace reuse the candidate without another model call', async () => {
     const f = await fixture();
     try {
@@ -463,4 +493,51 @@ test('disabling and reloading plugin cleans up listeners, ghost and layout witho
     expect(f.ui.captureCharFrame()).toContain('Проверь тесты');
     f.stop();
     expect(f.context.renderer.listenerCount('focused_editor')).toBe(0);
+});
+
+test('command palette titles and the status dialog stay entirely in English', async () => {
+    const f = await fixture();
+    try {
+        const titles = ['.accept', '.accept-word', '.dismiss', '.generate', '.status'].map(
+            (suffix) => f.command(suffix).title
+        );
+        expect(titles).toEqual([
+            'Accept prompt completion',
+            'Accept next completion word',
+            'Dismiss prompt completion',
+            'Suggest or complete the prompt',
+            'Completion status',
+        ]);
+        expect(titles.some((title) => /[А-Яа-яЁё]/.test(title))).toBe(false);
+        await f.command('.status').run();
+        expect(f.toasts.at(-1).title).toBe('Completion status');
+        expect(/[А-Яа-яЁё]/.test(f.toasts.at(-1).message)).toBe(false);
+    } finally {
+        f.stop();
+    }
+});
+
+test('status surfaces a sanitized English error and never the provider detail', async () => {
+    const f = await fixture();
+    try {
+        f.editor.insertText('Проверь');
+        await f.ui.renderOnce();
+        await pause();
+        expect(f.requests).toHaveLength(1);
+        f.requests[0].reject(new Error('provider private detail'));
+        await f.ui.renderOnce();
+        await pause();
+        await f.command('.status').run();
+        const { title, message } = f.toasts.at(-1);
+        expect(title).toBe('Completion status');
+        expect(message).toContain('State: error');
+        expect(message).toContain('Reason: request-failed');
+        expect(message).toContain('Error: Prediction request failed.');
+        expect(message).toContain('Timeout: 7000 ms');
+        expect(message).not.toContain('provider private detail');
+        expect(message).not.toContain('Проверь');
+        expect(message).not.toMatch(/[А-Яа-яЁё]/);
+    } finally {
+        f.stop();
+    }
 });

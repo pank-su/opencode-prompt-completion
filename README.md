@@ -28,7 +28,7 @@ opencode plugin add github:pank-su/opencode-prompt-completion
 
 OpenCode downloads the package and registers its CLI-only entry. No cloning,
 separate installer, npm account or manual dependency installation is needed.
-OpenCode supplies the host modules and manages package caching and updates.
+OpenCode supplies its plugin API and manages package dependencies, caching and updates.
 
 You can also add the package directly to `~/.config/opencode/cli.json`
 (or `$XDG_CONFIG_HOME/opencode/cli.json`):
@@ -79,16 +79,17 @@ punctuation.
 
 ## Configuration
 
-For manual mode use an object instead of the string in `cli.json`:
+Use an object instead of the plugin string in `cli.json` to customize completion:
 
 ```json
 {
   "package": "github:pank-su/opencode-prompt-completion",
   "options": {
-    "automatic": false,
+    "automatic": true,
     "typingDebounceMs": 500,
     "cooldownMs": 1500,
-    "timeoutMs": 7000
+    "timeoutMs": 7000,
+    "predictionModel": "openai/gpt-5.2#low"
   }
 }
 ```
@@ -99,11 +100,35 @@ For manual mode use an object instead of the string in `cli.json`:
 | `typingDebounceMs` | `500` | 100–5000 ms |
 | `cooldownMs` | `1500` | 0–10000 ms |
 | `timeoutMs` | `7000` | 1000–15000 ms |
+| `predictionModel` | Current prompt model | OpenCode `provider/model#variant` selector |
 
-By default the plugin uses the model from the prompt field with a supported
-`minimal` or `low` variant. The session's selected model and variant are not
-switched. The `predictionModel` option takes an object with `providerID`, `id`
-and an optional `variant` of a model available to you.
+For slower providers, set `timeoutMs` to `15000`. Completion status shows the
+configured timeout and a sanitized English error when a request fails. Increasing
+the timeout changes client waiting only; provider-side cancellation is not guaranteed.
+
+Set `automatic: false` for manual-only requests. The model above is an example;
+use a provider, model and variant available in your OpenCode `/models` catalog.
+As in [OpenCode model selection](https://opencode.ai/v2/docs/models), the model ID
+may contain `/`, and `#variant` is optional. The `predictionModel` value can also
+use OpenCode's expanded form:
+
+```json
+{
+  "providerID": "openai",
+  "model": "gpt-5.2",
+  "variant": "low"
+}
+```
+
+Without `predictionModel` (or with `null`), completion follows the prompt's model
+and uses an available `minimal` or `low` variant. An explicit selector uses only
+its own variant, or the model default if omitted; it never switches the main
+session model. Providers and credentials stay in OpenCode's configuration.
+Invalid selector syntax disables requests rather than falling back to a different
+model. Unknown models or variants are rejected by OpenCode during generation.
+The legacy object with `id` instead of `model` remains supported.
+Reasoning variants are provider-specific: `low` does not turn reasoning off.
+Use `#none` only when your model catalog exposes that variant.
 
 ### Disable
 
@@ -141,7 +166,8 @@ To disable it without removing its package entry, append
 
 ## Architecture
 
-- `src/tui.tsx` — the plugin entry point.
+- `tui.ts` — discovery entry and OpenCode-owned renderer/reactivity imports.
+- `src/tui.ts` — the plugin implementation and lifecycle wiring.
 - `src/prediction/` — the prediction core: controller, prompt and context
   building, word chunking.
 - `src/editor/` — the editor adapter and the inline ghost renderer.

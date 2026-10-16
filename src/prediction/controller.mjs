@@ -3,8 +3,9 @@ import { makePredictionPrompt, parsePrediction } from './prompt.mjs';
 const MAX_ATTEMPTS = 200;
 const TIMEOUT = Symbol('prediction-timeout');
 const CANCELLED = Symbol('prediction-cancelled');
-const TIMEOUT_ERROR = 'Не удалось получить предсказание: превышено время ожидания';
-const FAILURE_ERROR = 'Не удалось получить предсказание';
+const TIMEOUT_ERROR = 'Prediction timed out. Try again or increase timeoutMs.';
+const FAILURE_ERROR = 'Prediction request failed.';
+const RESPONSE_ERROR = 'The model returned an invalid completion.';
 
 /** @typedef {{providerID: string, id: string, variant?: string}} PredictionModel */
 
@@ -78,7 +79,7 @@ export class PredictionController {
   /** @type {{status: string, sessionID?: string|null, prefix?: string, suggestion?: string, reason?: string, error?: string}} */
   #state = { status: 'idle' };
   #snapshot = null;
-  /** @type {Map<string, {candidates: string[], attempts: Set<string>, dismissed: Set<string>, none: Set<string>, mismatches: Set<string>, errors: Map<string, string>}>} */
+  /** @type {Map<string, {candidates: string[], attempts: Set<string>, dismissed: Set<string>, none: Set<string>, mismatches: Set<string>, errors: Map<string, {message: string, reason: string}>}>} */
   #contexts = new Map();
   #inflight = null;
   #abortController = null;
@@ -279,7 +280,9 @@ export class PredictionController {
     if (outcome === CANCELLED) return;
 
     if (failure || outcome === TIMEOUT) {
-      this.#fail(scope, requestedPrefix, outcome === TIMEOUT ? TIMEOUT_ERROR : FAILURE_ERROR);
+      this.#fail(scope, requestedPrefix,
+        outcome === TIMEOUT ? TIMEOUT_ERROR : FAILURE_ERROR,
+        outcome === TIMEOUT ? 'request-timeout' : 'request-failed');
       return;
     }
 
@@ -288,7 +291,7 @@ export class PredictionController {
     try {
       suggestion = parsePrediction(text, { continuation: requestedPrefix.length > 0 });
     } catch {
-      this.#fail(scope, requestedPrefix, FAILURE_ERROR);
+      this.#fail(scope, requestedPrefix, RESPONSE_ERROR, 'invalid-response');
       return;
     }
 
@@ -301,7 +304,7 @@ export class PredictionController {
 
     // A "suffix" that repeats the whole requested draft would duplicate it.
     if (requestedPrefix.length > 0 && suggestion.startsWith(requestedPrefix)) {
-      this.#fail(scope, requestedPrefix, FAILURE_ERROR);
+      this.#fail(scope, requestedPrefix, RESPONSE_ERROR, 'repeated-draft');
       return;
     }
 
@@ -316,9 +319,9 @@ export class PredictionController {
     this.#render();
   }
 
-  #fail(scope, prefix, message) {
+  #fail(scope, prefix, message, reason) {
     const ctx = this.#context(scope);
-    if (!ctx.errors.has(prefix)) ctx.errors.set(prefix, message);
+    if (!ctx.errors.has(prefix)) ctx.errors.set(prefix, { message, reason });
     while (ctx.errors.size > MAX_ATTEMPTS) ctx.errors.delete(ctx.errors.keys().next().value);
     this.#errors += 1;
     this.#render();
@@ -341,7 +344,8 @@ export class PredictionController {
         return { status: 'none', ...base, reason: 'hidden' };
       }
       if (ctx.candidates.includes(prefix)) return { status: 'none', ...base, reason: 'complete' };
-      if (ctx.errors.has(prefix)) return { status: 'error', ...base, error: ctx.errors.get(prefix) };
+      const failure = ctx.errors.get(prefix);
+      if (failure) return { status: 'error', ...base, error: failure.message, reason: failure.reason };
       if (ctx.mismatches.has(prefix)) return { status: 'none', ...base, reason: 'prefix-mismatch' };
       if (ctx.none.has(prefix)) return { status: 'none', ...base, reason: 'no-suggestion' };
     }

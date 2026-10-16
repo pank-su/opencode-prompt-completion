@@ -578,7 +578,8 @@ test('timeout sets a distinct generic error state and aborts the signal', async 
   await delay(40);
 
   assert.equal(controller.state.status, 'error');
-  assert.match(controller.state.error, /время ожидания/);
+  assert.match(controller.state.error, /timed out/);
+  assert.equal(controller.state.reason, 'request-timeout');
   assert.equal(controller.state.suggestion, undefined);
   assert.equal(signal.aborted, true);
   assert.equal(controller.diagnostics.errors, 1);
@@ -591,7 +592,8 @@ test('timeout resolves cleanly even when generate ignores the AbortSignal', asyn
   await controller.request(snapshot(), 'src-1');
   await delay(40);
   assert.equal(controller.state.status, 'error');
-  assert.match(controller.state.error, /время ожидания/);
+  assert.match(controller.state.error, /timed out/);
+  assert.equal(controller.state.reason, 'request-timeout');
 
   call.resolve(text('too late'));
   await flush();
@@ -609,7 +611,8 @@ test('timeout is still reported as timeout when the client rejects immediately o
   await controller.request(snapshot(), 'timeout-abort');
   await delay(40);
   assert.equal(controller.state.status, 'error');
-  assert.match(controller.state.error, /время ожидания/);
+  assert.match(controller.state.error, /timed out/);
+  assert.equal(controller.state.reason, 'request-timeout');
 });
 
 test('a failed generation and an unparsable response produce the generic error', async () => {
@@ -617,14 +620,33 @@ test('a failed generation and an unparsable response produce the generic error',
   await failing.request(snapshot(), 'src-1');
   await flush();
   assert.equal(failing.state.status, 'error');
-  assert.equal(failing.state.error, 'Не удалось получить предсказание');
+  assert.equal(failing.state.error, 'Prediction request failed.');
+  assert.equal(failing.state.reason, 'request-failed');
   assert.ok(!failing.state.error.includes('secret'));
 
   const unparsable = new PredictionController({ generate: () => Promise.resolve({ text: 'not json at all' }) });
   await unparsable.request(snapshot(), 'src-1');
   await flush();
   assert.equal(unparsable.state.status, 'error');
-  assert.equal(unparsable.state.error, 'Не удалось получить предсказание');
+  assert.equal(unparsable.state.error, 'The model returned an invalid completion.');
+  assert.equal(unparsable.state.reason, 'invalid-response');
+});
+
+test('cached request failures retain their sanitized reason when switching sessions', async () => {
+  const controller = new PredictionController({ generate: async () => { throw new Error('provider private detail'); } });
+  try {
+    await controller.request(snapshot(), 'cached-failure');
+    await flush();
+    controller.update(snapshot({ sessionID: 's2' }));
+    assert.equal(controller.state.status, 'idle');
+    controller.update(snapshot());
+    assert.equal(controller.state.status, 'error');
+    assert.equal(controller.state.reason, 'request-failed');
+    assert.equal(controller.state.error, 'Prediction request failed.');
+    assert.ok(!JSON.stringify(controller.diagnostics).includes('provider private detail'));
+  } finally {
+    controller.dispose();
+  }
 });
 
 test('a suffix that repeats the whole draft becomes a generic error without leaking text', async () => {
@@ -634,7 +656,8 @@ test('a suffix that repeats the whole draft becomes a generic error without leak
   await controller.request(snapshot({ prefix: 'Мой' }), 'src-1');
   await flush();
   assert.equal(controller.state.status, 'error');
-  assert.equal(controller.state.error, 'Не удалось получить предсказание');
+  assert.equal(controller.state.error, 'The model returned an invalid completion.');
+  assert.equal(controller.state.reason, 'repeated-draft');
   assert.ok(!controller.state.error.includes('черновик'));
   assert.equal(controller.state.prefix, 'Мой');
 });

@@ -31,3 +31,53 @@ test('explicit prediction model is used as-is; incomplete configuration does not
   host.ui.model.current = () => undefined;
   assert.equal(predictionModel(host), undefined);
 });
+
+test('OpenCode string selectors support variants and nested model IDs', () => {
+  for (const [selector, expected] of [
+    ['openai/gpt-5.2', { providerID: 'openai', id: 'gpt-5.2', variant: undefined }],
+    ['openai/gpt-5.2#low', { providerID: 'openai', id: 'gpt-5.2', variant: 'low' }],
+    ['openrouter/anthropic/claude-sonnet-4.5#high', { providerID: 'openrouter', id: 'anthropic/claude-sonnet-4.5', variant: 'high' }],
+    ['vllm/Qwen/Qwen3-Coder-30B-A3B-Instruct', { providerID: 'vllm', id: 'Qwen/Qwen3-Coder-30B-A3B-Instruct', variant: undefined }],
+  ]) {
+    const host = context({ predictionModel: selector });
+    assert.deepEqual(predictionModel(host), expected);
+    assert.equal(host.selected.variant, 'high');
+  }
+});
+
+test('OpenCode expanded selectors use model, while legacy id stays supported', () => {
+  for (const selector of [
+    { providerID: 'openai', model: 'gpt-5.2', variant: 'low' },
+    { providerID: 'openai', id: 'gpt-5.2', variant: 'low' },
+  ]) {
+    assert.deepEqual(predictionModel(context({ predictionModel: selector })), {
+      providerID: 'openai', id: 'gpt-5.2', variant: 'low',
+    });
+  }
+  assert.deepEqual(predictionModel(context({ predictionModel: { providerID: 'test', model: 'native', id: 'legacy' } })), {
+    providerID: 'test', id: 'native', variant: undefined,
+  });
+});
+
+test('malformed explicit selectors never silently switch to the session model', () => {
+  for (const selector of [
+    '', 'openai', '/model', 'openai/', 'openai/model#', 'openai/model#low#extra', 'open#ai/model',
+    false, 42, [], {}, { providerID: 'test' }, { providerID: '/bad', model: 'model' },
+    { providerID: 'test', model: '' }, { providerID: 'test', model: 42 },
+    { providerID: 'test', model: 'model#low' }, { providerID: 'test', model: 'model', variant: '' },
+    { providerID: 'test', model: 'model', variant: null }, { providerID: 'test', model: 'model', variant: 'low#extra' },
+    { providerID: 'test', model: '', id: 'legacy' }, { providerID: 'test', id: true },
+  ]) {
+    assert.equal(predictionModel(context({ predictionModel: selector })), undefined, JSON.stringify(selector));
+  }
+});
+
+test('unset model uses session defaults; explicit models do not borrow session variants', () => {
+  assert.deepEqual(predictionModel(context({ predictionModel: null })), predictionModel(context()));
+  assert.deepEqual(predictionModel(context({ predictionModel: { providerID: 'other', model: 'small' } })), {
+    providerID: 'other', id: 'small', variant: undefined,
+  });
+  const host = context({ predictionModel: 'other/small#low' });
+  host.ui.model.current = () => undefined;
+  assert.deepEqual(predictionModel(host), { providerID: 'other', id: 'small', variant: 'low' });
+});

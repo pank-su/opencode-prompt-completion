@@ -1,18 +1,23 @@
-/** @jsxImportSource @opentui/solid */
-import { createEffect, createSignal } from 'solid-js';
-import { Plugin, usePlugin } from '@opencode/plugin/tui';
-import { Renderable, Yoga } from '@opentui/core';
+import type { Plugin } from '@opencode/plugin/tui';
 import { PredictionController } from './prediction/controller.mjs';
 import { createInlineGhost } from './editor/ghost';
 import { insertPrediction, promptSnapshot, watchPrompt } from './editor/adapter.mjs';
 import { readOptions } from './opencode/options.mjs';
+import { completionStatus } from './opencode/diagnostics.mjs';
 import { completionSnapshot, INVALIDATING_EVENTS } from './opencode/snapshot.mjs';
 import { PredictionScheduler } from './opencode/scheduler.mjs';
 import { registerPromptCommands, registerGlobalCommands } from './opencode/commands';
-import { PLUGIN_ID } from './identity.mjs';
 import { nextWordChunk } from './prediction/word.mjs';
 
-export function setupPromptCompletion(context: Plugin.Context) {
+type TuiRuntime = Pick<typeof import('@opentui/core'), 'Renderable' | 'Yoga'> & {
+    createEffect: typeof import('solid-js').createEffect;
+    createSignal: typeof import('solid-js').createSignal;
+    usePlugin: typeof import('@opencode/plugin/tui').usePlugin;
+    renderObserver: (observer: () => null) => null;
+};
+
+export function setupPromptCompletion(context: Plugin.Context, runtime: TuiRuntime) {
+    const { Renderable, Yoga, createEffect, createSignal, usePlugin } = runtime;
     const options = readOptions(context.options);
     const [revision, setRevision] = createSignal(0);
     let disposed = false,
@@ -153,25 +158,23 @@ export function setupPromptCompletion(context: Plugin.Context) {
         });
         return null;
     }
-    const stopSlot = context.ui.slot({ append: 'app', render: () => <Observer /> });
+    const stopSlot = context.ui.slot({ append: 'app', render: () => runtime.renderObserver(Observer) });
     registerGlobalCommands(context, {
         generate() {
             const route = context.ui.router.current();
             if (route.type === 'session' && !broken) scheduler.requestManual(route.sessionID);
         },
         async status() {
-            const value = lastSnapshot;
-            const stats = controller.diagnostics;
             await context.ui.dialog.alert({
                 title: 'Completion status',
-                message: [
-                    `Mode: ${broken ? 'stopped after an error' : options.automatic ? 'automatic' : 'manual'}`,
-                    `State: ${controller.state.status} · ${controller.state.reason ?? '—'}`,
-                    `Prompt: ${value?.presentable ? 'available' : 'hidden'} · requests: ${value?.requestable ? 'available' : 'blocked'}`,
-                    `Model: ${value?.model ? `${value.model.providerID}/${value.model.id} · ${value.model.variant ?? 'default'}` : 'not selected'}`,
-                    `Requests: ${stats.requests} · cache: ${stats.cacheHits} · errors: ${stats.errors}`,
-                    `Last latency: ${stats.latencyMs ?? '—'} ms · context: ${value?.context.length ?? 0} UTF-16 units`,
-                ].join('\n'),
+                message: completionStatus({
+                    automatic: options.automatic,
+                    broken,
+                    state: controller.state,
+                    stats: controller.diagnostics,
+                    snapshot: lastSnapshot,
+                    timeoutMs: options.timeoutMs,
+                }),
             });
         },
     });
@@ -188,5 +191,3 @@ export function setupPromptCompletion(context: Plugin.Context) {
         ghost.dispose();
     };
 }
-
-export default Plugin.define({ id: PLUGIN_ID, setup: setupPromptCompletion });

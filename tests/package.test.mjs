@@ -8,14 +8,14 @@ const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 test('public package metadata, license and allowlisted files are self-contained', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '0.2.3');
+  assert.equal(pkg.version, '0.2.5');
   assert.equal(pkg.license, 'MIT');
   assert.equal(pkg.author, 'pank-su');
   assert.equal(pkg.private, true);
   assert.match(pkg.repository.url, /github\.com\/pank-su\/opencode-prompt-completion\.git$/);
-  assert.equal(pkg.exports['./tui'], './src/tui.tsx');
+  assert.equal(pkg.exports['./tui'], './tui.ts');
   assert.equal(pkg.exports['.'], undefined, 'CLI-only plugin must not register a server entry');
-  assert.deepEqual(pkg.files, ['src', 'README.md', 'LICENSE']);
+  assert.deepEqual(pkg.files, ['tui.ts', 'src', 'README.md', 'LICENSE']);
   for (const file of pkg.files) {
     const resolved = path.resolve(root, file);
     assert.ok(resolved.startsWith(root + path.sep));
@@ -28,13 +28,28 @@ test('public package metadata, license and allowlisted files are self-contained'
   }
 });
 
-test('host peers are optional and installation has no scripts or production dependencies', () => {
+test('renderer peers are required at tested versions; the host SDK is development-only', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.deepEqual(Object.keys(pkg.dependencies ?? {}), []);
   assert.equal(pkg.peerDependencies['@opencode/plugin'], undefined, 'the host provides the SDK; keep it development-only');
   assert.ok(pkg.devDependencies['@opencode/plugin']);
-  for (const name of Object.keys(pkg.peerDependencies)) assert.equal(pkg.peerDependenciesMeta[name]?.optional, true, name);
+  assert.deepEqual(Object.keys(pkg.peerDependencies).sort(), ['@opentui/core', '@opentui/solid', 'solid-js']);
+  for (const name of Object.keys(pkg.peerDependencies)) {
+    assert.equal(pkg.peerDependencies[name], pkg.devDependencies[name], name);
+    assert.notEqual(pkg.peerDependenciesMeta?.[name]?.optional, true, name);
+  }
   for (const hook of ['preinstall', 'install', 'postinstall', 'prepare', 'prepack']) assert.equal(pkg.scripts[hook], undefined, hook);
+});
+
+test('local directory discovery and package loading share a root TUI entry', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.ok(fs.existsSync(path.join(root, 'tui.ts')), 'OpenCode local discovery requires a root tui.ts');
+  assert.equal(pkg.exports['./tui'], './tui.ts');
+  assert.ok(pkg.files.includes('tui.ts'));
+  const entry = fs.readFileSync(path.join(root, 'tui.ts'), 'utf8');
+  assert.match(entry, /import\s*\{\s*setupPromptCompletion\s*\}\s*from\s*['"]\.\/src\/tui['"]/);
+  assert.match(entry, /from ['"]@opentui\/core['"]/);
+  assert.doesNotMatch(fs.readFileSync(path.join(root, 'src/tui.ts'), 'utf8'), /^import (?!type).*from ['"](?:solid-js|@opentui\/core|@opencode\/plugin\/tui)['"]/m);
 });
 
 test('documentation is limited to English README and LICENSE with native install instructions', () => {
