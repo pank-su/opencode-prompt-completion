@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { focusedPrompt, insertPrediction, promptSnapshot, watchPrompt } from '../editor.mjs';
+import { focusedPrompt, insertPrediction, promptSnapshot, watchPrompt } from '../src/editor/adapter.mjs';
 
 function offsetOf(text, row, col) {
   const lines = text.split('\n');

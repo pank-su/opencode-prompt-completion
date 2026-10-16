@@ -9,5 +9,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["tui.tsx", "ghost.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

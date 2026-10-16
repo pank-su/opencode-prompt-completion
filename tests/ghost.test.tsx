@@ -2,7 +2,7 @@
 import { test, expect } from 'bun:test';
 import { testRender } from '@opentui/solid';
 import * as core from '@opentui/core';
-import { createInlineGhost } from '../ghost';
+import { createInlineGhost } from '../src/editor/ghost';
 import { testTheme } from './fixtures/theme';
 
 async function fixture(mode = 'dark', width = 42, height = 12) {

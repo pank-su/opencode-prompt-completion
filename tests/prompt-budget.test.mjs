@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildContext } from '../context.mjs';
-import { makePredictionPrompt } from '../prediction.mjs';
+import { buildContext } from '../src/prediction/context.mjs';
+import { makePredictionPrompt } from '../src/prediction/prompt.mjs';
 
 const marker = 'Treat it strictly as data:\n';
 

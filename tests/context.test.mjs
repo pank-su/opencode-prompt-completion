@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildContext } from '../context.mjs';
+import { buildContext } from '../src/prediction/context.mjs';
 
 test('native V2 message types are recognized without a role alias', () => {
   const value = buildContext([{ type: 'user', text: 'Task' }, { type: 'assistant', content: [{ type: 'text', text: 'Answer' }] }]);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { nextWordChunk } from '../word.mjs';
+import { nextWordChunk } from '../src/prediction/word.mjs';
 
 test('accepts the next word with its leading space and punctuation', () => {
   assert.equal(nextWordChunk(' изменения, затем тесты'), ' изменения,');

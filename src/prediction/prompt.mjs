@@ -65,21 +65,6 @@ export function makePredictionPrompt(prefix = '', context = '[]') {
   return `${header}\n${CONTEXT_LABEL}\n${bounded}`;
 }
 
-/** Events that dismiss a shown or in-flight prediction for the active session. */
-export const INVALIDATING_EVENTS = new Set([
-  'session.inbox.enqueued',
-  'session.execution.started',
-  'session.execution.failed',
-  'session.execution.interrupted',
-  'session.model.selected',
-  'session.agent.selected',
-  'session.moved',
-  'session.revert.staged',
-  'session.revert.committed',
-  'session.compaction.started',
-  'session.deleted',
-]);
-
 const MAX_SUGGESTION_LENGTH = 400;
 const CONTROL_CHARS = /[\u0000-\u001F\u007F-\u009F\u2028\u2029]/;
 // A single fenced block may wrap the whole response; nothing else is accepted.

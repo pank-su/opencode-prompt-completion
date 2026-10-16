@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 
 import {
   PREDICTION_PROMPT,
-  INVALIDATING_EVENTS,
   makePredictionPrompt,
   parsePrediction,
-} from '../prediction.mjs';
-import { PredictionController } from '../controller.mjs';
+} from '../src/prediction/prompt.mjs';
+import { PredictionController } from '../src/prediction/controller.mjs';
+import { INVALIDATING_EVENTS } from '../src/opencode/snapshot.mjs';
 
 const flush = async (ticks = 4) => {
   for (let i = 0; i < ticks; i += 1) await new Promise((resolve) => setImmediate(resolve));

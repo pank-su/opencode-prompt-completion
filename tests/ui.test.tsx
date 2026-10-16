@@ -8,7 +8,7 @@ import { testTheme } from './fixtures/theme';
 
 let mountedContext;
 mock.module('@opencode/plugin/tui', () => ({ Plugin: { define: (value) => value }, usePlugin: () => mountedContext }));
-const { default: plugin } = await import('../tui');
+const { default: plugin } = await import('../src/tui');
 const pause = (ms = 150) => new Promise((resolve) => setTimeout(resolve, ms));
 const wordModifiers = process.platform === 'darwin' ? { meta: true } : { ctrl: true };
 

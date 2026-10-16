@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PredictionController } from '../controller.mjs';
+import { PredictionController } from '../src/prediction/controller.mjs';
 
 test('a manually extended complete candidate is visible instead of hidden by the shorter cached candidate', async () => {
   let calls = 0;

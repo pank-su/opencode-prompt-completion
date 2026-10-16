@@ -1,76 +1,89 @@
 # OpenCode Prompt Completion
 
-Плагин для OpenCode V2: показывает серое продолжение прямо в поле ввода.
-`Tab` принимает продолжение целиком, `Option+→` на macOS или `Ctrl+→` на
-Linux/Windows — следующее слово, `Esc` скрывает подсказку. До принятия подсказка
-не входит в текст промпта. Сообщения автоматически не отправляются.
+An OpenCode V2 plugin that shows a grey continuation directly in the prompt
+field. `Tab` accepts the whole continuation, `Option+→` on macOS or `Ctrl+→` on
+Linux/Windows accepts the next word, and `Esc` hides the hint. Until you accept
+it, the hint is not part of the prompt text, and messages are never sent
+automatically.
 
-**Автоматический режим включён по умолчанию. После паузы в печати черновик
-отправляется выбранной модели до нажатия Enter. Запросы расходуют квоту или
-оплачиваемые токены.** Ниже описан ручной режим без автоматических запросов.
+**Automatic mode is on by default: drafts are sent to the selected model before
+Enter and requests consume quota or paid tokens.** Set `automatic: false` for
+manual-only requests; see [Configuration](#configuration).
 
-## Требования
+## Requirements
 
-- OpenCode V2 с CLI plugin API. Адаптер разработан для OpenCode `2.0.27` и
-  OpenTUI `0.5.17`; другие версии требуют отдельной проверки.
-- Настроенный провайдер и доступная модель в OpenCode.
-- Node.js `26.4.0` или новее для команд этого проекта. Для разработки также
-  нужен Bun `1.3.14`.
+- OpenCode V2 with the CLI plugin API. The adapter is built against OpenCode
+  `2.0.27` and OpenTUI `0.5.17`; other versions need separate verification.
+- A configured provider and an available model in OpenCode.
+- A current OpenCode V2 CLI with `opencode plugin add`.
 
-Это CLI-only плагин: он подключается через глобальный `cli.json`, в том числе
-при работе с удалённым сервером. OpenCode V1 не поддерживается.
+This is a CLI-only plugin: it attaches through the global `cli.json`, including
+when you work with a remote server. OpenCode V1 is not supported.
 
-## Установка
-
-Из каталога скачанного репозитория:
+## Installation
 
 ```sh
-node scripts/install.mjs --dry-run
-node scripts/install.mjs --apply
+opencode plugin add github:pank-su/opencode-prompt-completion
 ```
 
-Для установки не требуется скачивать dev-зависимости: host-модули предоставляет
-OpenCode. Установщик копирует файлы в отдельный каталог релиза и подключает его
-в `~/.config/opencode/cli.json`. При заданном `XDG_CONFIG_HOME` используется
-`$XDG_CONFIG_HOME/opencode/cli.json`. Альтернативный каталог можно передать
-через `--config-dir`.
+OpenCode downloads the package and registers its CLI-only entry. No cloning,
+separate installer, npm account or manual dependency installation is needed.
+OpenCode supplies the host modules and manages package caching and updates.
 
-`--dry-run` выводит план в JSON и не пишет файлы. `--apply` создаёт целый релиз
-в `tui-plugins/panksup-prompt-completion/releases/<version>-<hash>/`, затем
-заменяет запись в `cli.json`. Предыдущие релизы, опции плагина и посторонние
-настройки сохраняются. Перед изменением конфигурации создаётся её резервная
-копия. Изменённый вручную релиз установщик не перезаписывает.
-
-После установки откройте сессию, наберите не менее трёх символов и оставьте
-курсор в конце. После паузы и ответа модели может появиться серый текст.
-Если плагин не загрузился в уже открытом TUI, перезапустите клиент.
-
-Не подключайте изменяемый рабочий каталог напрямую: при обновлении по одному
-файлу hot reload может загрузить несовместимые версии модулей.
-
-## Управление
-
-| Действие | Клавиши |
-| --- | --- |
-| Принять всё продолжение | `Tab` |
-| Принять следующее слово | `Option+→` на macOS, `Ctrl+→` на Linux/Windows |
-| Альтернативное принятие слова на macOS | `Option+F` для терминалов, передающих `Esc+f` |
-| Скрыть показанную подсказку | `Esc` |
-| Запросить подсказку вручную | `<leader>j` или «Предложить или дополнить промпт» в command palette |
-| Открыть диагностику | «Статус автодополнения» в command palette |
-
-`Enter` и `Shift+Tab` сохраняют обычное поведение. При совпадающем наборе,
-Backspace и принятии по словам остаток берётся из кеша без нового запроса.
-Слово — фрагмент до следующего пробела с ведущим разделителем и пунктуацией.
-
-## Настройка
-
-Для ручного режима задайте `automatic: false` в установленной записи
-`plugins` в `cli.json`. Вместо строки с путём используйте объект с тем же путём:
+You can also add the package directly to `~/.config/opencode/cli.json`
+(or `$XDG_CONFIG_HOME/opencode/cli.json`):
 
 ```json
 {
-  "package": "/absolute/path/to/the/installed/release",
+  "plugins": ["github:pank-su/opencode-prompt-completion"]
+}
+```
+
+Merge the entry into your existing `plugins` array; do not replace other plugins.
+Use `cli.json`, not `opencode.json`, so the plugin stays local with remote servers.
+GitHub installation uses the repository; no npm release is required.
+
+After installing, open a session, type at least three characters and leave the
+cursor at the end. After a pause and a model response, grey text may appear. If
+the plugin did not load into an already open TUI, restart the client.
+
+When migrating from the old installer, replace its absolute-path plugin entry
+with the GitHub package entry and carry over any `options`. Do not keep both
+entries. Old release directories can remain on disk.
+
+## Updating
+
+```sh
+opencode plugin check
+opencode plugin update github:pank-su/opencode-prompt-completion
+```
+
+To pin a revision, append `#<full-commit-hash>` to the GitHub package specifier.
+Pinned revisions are not updated automatically by `plugin update`.
+
+## Controls
+
+| Action | Keys |
+| --- | --- |
+| Accept the whole continuation | `Tab` |
+| Accept the next word | `Option+→` on macOS, `Ctrl+→` on Linux/Windows |
+| Alternative word acceptance on macOS | `Option+F`, for terminals that send `Esc+f` |
+| Hide the shown hint | `Esc` |
+| Request a hint manually | `<leader>j`, or the "Suggest or complete the prompt" command palette entry |
+| Open diagnostics | The "Completion status" command palette entry |
+
+`Enter` and `Shift+Tab` keep their usual behaviour. With matching input,
+Backspace and word-wise acceptance reuse the cached suffix without a new request.
+A word is the fragment up to the next space, including a leading separator and
+punctuation.
+
+## Configuration
+
+For manual mode use an object instead of the string in `cli.json`:
+
+```json
+{
+  "package": "github:pank-su/opencode-prompt-completion",
   "options": {
     "automatic": false,
     "typingDebounceMs": 500,
@@ -80,59 +93,79 @@ Backspace и принятии по словам остаток берётся и
 }
 ```
 
-| Параметр | По умолчанию | Диапазон |
+| Option | Default | Range |
 | --- | --- | --- |
-| `automatic` | `true` | `true` или `false` |
-| `typingDebounceMs` | `500` | 100–5000 мс |
-| `cooldownMs` | `1500` | 0–10000 мс |
-| `timeoutMs` | `7000` | 1000–15000 мс |
+| `automatic` | `true` | `true` or `false` |
+| `typingDebounceMs` | `500` | 100–5000 ms |
+| `cooldownMs` | `1500` | 0–10000 ms |
+| `timeoutMs` | `7000` | 1000–15000 ms |
 
-По умолчанию используется модель из поля ввода с поддерживаемым вариантом
-`minimal` или `low`. Выбор и вариант модели основной сессии не переключаются.
-Опция `predictionModel` позволяет задать объект с `providerID`, `id` и
-необязательным `variant` доступной вам модели.
+By default the plugin uses the model from the prompt field with a supported
+`minimal` or `low` variant. The session's selected model and variant are not
+switched. The `predictionModel` option takes an object with `providerID`, `id`
+and an optional `variant` of a model available to you.
 
-Для отключения замените установленную запись на
-`"-panksup.prompt-completion"`. Старые каталоги релизов можно оставить на диске.
+### Disable
 
-## Данные и ограничения
+Remove the plugin with:
 
-- Используется stateless `generate.text`, без создания сессий и вызова tools.
-- В запрос входят черновик и максимум четыре последних текстовых сообщения
-  пользователя и ассистента. Tool output, reasoning, system-инструкции,
-  изображения и файловые вложения отдельно не добавляются. Текст, уже
-  включённый в обычное сообщение, может попасть в контекст.
-- Контекст ограничен 10000 UTF-16 единиц, весь промпт — 13000 UTF-16 единиц.
-  При сокращении сохраняется корректный JSON.
-- Плагин не ведёт собственный журнал черновиков и ответов. Это не гарантия
-  отсутствия логирования на стороне OpenCode или провайдера. Кеш плагина
-  хранится в памяти: до 16 контекстов по 32 кандидата.
-- Одновременно ожидается не более одного клиентского запроса. Таймаут и
-  отмена не гарантируют остановку генерации и начисления токенов провайдером.
-- Команды `/…`, `!…`, дочерние сессии и черновики длиннее 2000 UTF-16 единиц
-  не дополняются. Нужны фокус, отсутствие выделения и курсор в конце.
-- При потере фокуса, shell mode или открытом меню autocomplete подсказка
-  скрывается. Незавершённый ответ работающего агента не входит в контекст.
-- `null`, ошибка или скрытие через `Esc` не вызывают автоматических повторов
-  для того же черновика. Предсказание может отсутствовать.
+```sh
+opencode plugin remove github:pank-su/opencode-prompt-completion
+```
 
-## Разработка
+To disable it without removing its package entry, append
+`"-panksup.prompt-completion"` after that entry in `plugins`.
+
+## Data and limitations
+
+- The plugin uses stateless `generate.text`, without creating sessions or
+  calling tools.
+- A request contains the draft and at most four recent user and assistant text
+  messages. Tool output, reasoning, system instructions, images and file
+  attachments are not added separately. Text already included in a normal
+  message may still enter the context.
+- The context is limited to 10000 UTF-16 units and the whole prompt to 13000
+  UTF-16 units. Reduction keeps the JSON valid.
+- The plugin keeps no log of drafts or responses. This is not a guarantee that
+  OpenCode or the provider does not log. The plugin cache is in memory: up to 16
+  contexts of 32 candidates each.
+- At most one client request is in flight at a time. A timeout and cancellation
+  do not guarantee that the provider stops generating and charging tokens.
+- Commands (`/…`, `!…`), child sessions and drafts longer than 2000 UTF-16 units
+  are not completed. The prompt needs focus, no selection and the cursor at the
+  end.
+- Losing focus, shell mode or an open autocomplete menu hides the hint. An
+  incomplete reply from a running agent is not included in the context.
+- `null`, an error or hiding with `Esc` never triggers automatic retries for the
+  same draft. A prediction may be unavailable.
+
+## Architecture
+
+- `src/tui.tsx` — the plugin entry point.
+- `src/prediction/` — the prediction core: controller, prompt and context
+  building, word chunking.
+- `src/editor/` — the editor adapter and the inline ghost renderer.
+- `src/opencode/` — OpenCode integration: options, scheduler, commands and
+  snapshot.
+
+## Development
+
+Requires Node.js `26.4.0+` and Bun `1.3.14`.
 
 ```sh
 bun install --frozen-lockfile --ignore-scripts
 bun run check
 ```
 
-`check` запускает Node-тесты, renderer-тесты и TypeScript. Тесты используют
-подставную модель, настоящий native textarea и не требуют API-ключей.
-GitHub Actions настроен на Ubuntu, macOS и Windows; наличие workflow не
-заменяет результат его запуска.
+`check` runs the Node tests, the renderer tests and TypeScript. The tests use a
+stub model and the real native textarea and need no API keys. GitHub Actions is
+configured for Ubuntu, macOS and Windows; the presence of a workflow does not
+replace the result of an actual run, and runtime support on Linux and Windows is
+not confirmed here.
 
-Подробнее: [CONTRIBUTING.md](CONTRIBUTING.md),
-[CHANGELOG.md](CHANGELOG.md), [SECURITY.md](SECURITY.md).
+## License
 
-## Лицензия
-
-[MIT](LICENSE). Автор собственной реализации — [pank-su](https://github.com/pank-su).
-Это независимый плагин, не официальный компонент OpenCode.
-Зависимости перечислены в [THIRD_PARTY.md](THIRD_PARTY.md).
+[MIT](LICENSE). The author of this implementation is
+[pank-su](https://github.com/pank-su). This is an independent plugin, not an
+official OpenCode component. OpenCode, OpenTUI and SolidJS retain their own
+copyrights and licenses; their source and binaries are not vendored here.

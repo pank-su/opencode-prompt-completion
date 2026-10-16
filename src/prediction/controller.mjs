@@ -1,10 +1,12 @@
-import { makePredictionPrompt, parsePrediction } from './prediction.mjs';
+import { makePredictionPrompt, parsePrediction } from './prompt.mjs';
 
 const MAX_ATTEMPTS = 200;
 const TIMEOUT = Symbol('prediction-timeout');
 const CANCELLED = Symbol('prediction-cancelled');
 const TIMEOUT_ERROR = 'Не удалось получить предсказание: превышено время ожидания';
 const FAILURE_ERROR = 'Не удалось получить предсказание';
+
+/** @typedef {{providerID: string, id: string, variant?: string}} PredictionModel */
 
 function isModel(model) {
   return model != null
@@ -92,7 +94,7 @@ export class PredictionController {
 
   /**
    * @param {{
-   *   generate: (request: {model: object, prefix: string, context: string, prompt: string}, options: {signal: AbortSignal}) => Promise<{text: string}>,
+   *   generate: (request: {model: PredictionModel, prefix: string, context: string, prompt: string}, options: {signal: AbortSignal}) => Promise<{text: string}>,
    *   onChange?: (state: object) => void,
    *   timeoutMs?: number,
    *   automatic?: boolean,
