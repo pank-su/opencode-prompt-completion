@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.log
+*.bak
+*.tgz
+.DS_Store
+.env
+.env.*
+.npmrc
+cli.json
+opencode.json
+opencode.jsonc

@@ -1,0 +1,53 @@
+{
+  "name": "panksup-prompt-completion",
+  "version": "0.2.3",
+  "description": "Inline prompt completion for the OpenCode V2 terminal UI",
+  "author": "pank-su",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pank-su/opencode-prompt-completion.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pank-su/opencode-prompt-completion/issues"
+  },
+  "keywords": ["opencode", "plugin", "tui", "autocomplete", "prompt"],
+  "packageManager": "bun@1.3.14",
+  "engines": {
+    "node": ">=26.4.0",
+    "bun": ">=1.3.14"
+  },
+  "scripts": {
+    "test:unit": "node --test tests/prediction.test.mjs tests/context.test.mjs tests/editor.test.mjs tests/install.test.mjs tests/retry.test.mjs tests/word.test.mjs tests/prompt-budget.test.mjs tests/package.test.mjs",
+    "test:renderer": "bun test --preload @opentui/solid/preload ./tests/ghost.test.tsx ./tests/ui.test.tsx",
+    "test": "bun run test:unit && bun run test:renderer",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run test && bun run typecheck"
+  },
+  "files": [
+    "tui.tsx", "ghost.ts", "controller.mjs", "context.mjs", "editor.mjs",
+    "prediction.mjs", "word.mjs", "scripts/install.mjs",
+    "README.md", "LICENSE", "CHANGELOG.md", "SECURITY.md", "CONTRIBUTING.md", "THIRD_PARTY.md"
+  ],
+  "exports": {
+    "./tui": "./tui.tsx"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": ">=2.0.27 <3",
+    "@opentui/core": ">=0.5.17 <0.6",
+    "@opentui/solid": ">=0.5.17 <0.6",
+    "solid-js": ">=1.9.0 <2"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "2.0.27",
+    "@opencode/theme": "2.0.27",
+    "@opentui/core": "0.5.17",
+    "@opentui/solid": "0.5.17",
+    "@opentui/keymap": "0.5.17",
+    "solid-js": "1.9.12",
+    "typescript": "5.8.2",
+    "@types/bun": "1.4.0"
+  }
+}
