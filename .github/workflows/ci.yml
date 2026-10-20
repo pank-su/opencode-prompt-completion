@@ -16,6 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        runtime: [current, legacy]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,4 +28,6 @@ jobs:
         with:
           bun-version: '1.3.14'
       - run: bun install --frozen-lockfile --ignore-scripts
+      - if: matrix.runtime == 'legacy'
+        run: bun add --dev --exact --ignore-scripts @opencode/plugin@2.0.27 @opencode/theme@2.0.27 @opentui/core@0.5.17 @opentui/solid@0.5.17 @opentui/keymap@0.5.17
       - run: bun run check

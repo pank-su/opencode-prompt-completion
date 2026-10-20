@@ -57,6 +57,12 @@ async function fixture(mode = 'dark', width = 42, height = 12) {
     };
 }
 
+function minimumHeight(editor) {
+    return typeof editor.getMinHeight === 'function'
+        ? editor.getMinHeight()
+        : editor.getLayoutNode().getMinHeight();
+}
+
 test.each(['light', 'dark'])('ghost is inside the real input and not in its buffer in %s theme', async (mode) => {
     const f = await fixture(mode);
     try {
@@ -108,7 +114,7 @@ test('the underlay does not steal mouse clicks or selections', async () => {
 test('wrapping stays inside input, handles Unicode and restores original minimum height', async () => {
     const f = await fixture('dark', 22);
     try {
-        const original = { ...f.editor.getLayoutNode().getMinHeight() };
+        const original = { ...minimumHeight(f.editor) };
         await f.show('Проверь', ' 🧪 е́ и добавь тесты на регрессии');
         const frame = f.ui.captureCharFrame();
         expect(frame).toContain('🧪');
@@ -120,7 +126,7 @@ test('wrapping stays inside input, handles Unicode and restores original minimum
         f.ghost.clear();
         await f.ui.renderOnce();
         await f.ui.renderOnce();
-        expect(f.editor.getLayoutNode().getMinHeight()).toEqual(original);
+        expect(minimumHeight(f.editor)).toEqual(original);
         expect(f.editor.height).toBe(1);
         expect(f.failures).toHaveLength(0);
     } finally {

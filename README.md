@@ -12,8 +12,8 @@ manual-only requests; see [Configuration](#configuration).
 
 ## Requirements
 
-- OpenCode V2 with the CLI plugin API. The adapter is built against OpenCode
-  `2.0.27` and OpenTUI `0.5.17`; other versions need separate verification.
+- OpenCode V2 with the CLI plugin API. Renderer checks cover OpenCode
+  `2.0.27` / OpenTUI `0.5.17` and OpenCode `2.1.0` / OpenTUI `0.6.6`.
 - A configured provider and an available model in OpenCode.
 - A current OpenCode V2 CLI with `opencode plugin add`.
 
@@ -184,10 +184,9 @@ bun run check
 ```
 
 `check` runs the Node tests, the renderer tests and TypeScript. The tests use a
-stub model and the real native textarea and need no API keys. GitHub Actions is
-configured for Ubuntu, macOS and Windows; the presence of a workflow does not
-replace the result of an actual run, and runtime support on Linux and Windows is
-not confirmed here.
+stub model and the real native textarea and need no API keys. GitHub Actions
+checks both renderer generations on Ubuntu, macOS and Windows. A workflow's
+presence does not replace its actual result or a native OpenCode TUI smoke test.
 
 ## License
 

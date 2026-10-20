@@ -55,6 +55,22 @@ test('the sanitized controller error and its reason are surfaced', () => {
   assert.match(report, /^Timeout: 7000 ms$/m);
 });
 
+test('a stopped UI reports an error even when model generation completed successfully', () => {
+  const report = completionStatus({
+    automatic: true,
+    broken: true,
+    state: { status: 'ready', suggestion: 'PRIVATE_SUGGESTION' },
+    stats: { requests: 1, errors: 0 },
+    snapshot,
+    timeoutMs: 15000,
+  });
+  assert.match(report, /^State: error$/m);
+  assert.match(report, /^Reason: ui-runtime-error$/m);
+  assert.match(report, /^Error: The completion UI stopped after an error\.$/m);
+  assert.doesNotMatch(report, /^State: ready$/m);
+  assert.ok(!report.includes('PRIVATE_SUGGESTION'));
+});
+
 test('a timeout surfaces the sanitized reason, message and configured limit', () => {
   const report = completionStatus({
     automatic: false,

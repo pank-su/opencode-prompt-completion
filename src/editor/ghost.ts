@@ -2,6 +2,23 @@ import type { RGBA, CliRenderer, OptimizedBuffer, TextareaRenderable } from '@op
 
 type Cell = { text: string; width: number };
 type StyleValue = { unit: number; value: number };
+type HeightLayout = {
+    getMinHeight(): StyleValue;
+    getMaxHeight(): StyleValue;
+    getHeight(): StyleValue;
+};
+
+function heightLayout(editor: TextareaRenderable): HeightLayout {
+    const compatible = editor as TextareaRenderable & Partial<HeightLayout> & {
+        getLayoutNode?: () => HeightLayout;
+    };
+    // OpenTUI 0.6 exposes these getters on the renderable; 0.5 uses its Yoga node.
+    if (typeof compatible.getMinHeight === 'function' &&
+        typeof compatible.getMaxHeight === 'function' &&
+        typeof compatible.getHeight === 'function') return compatible as HeightLayout;
+    if (typeof compatible.getLayoutNode === 'function') return compatible.getLayoutNode();
+    throw new Error('Unsupported editor layout API');
+}
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 
 function rowsFor(cells: Cell[], start: number, width: number) {
@@ -72,7 +89,7 @@ export function createInlineGhost(
             this.failed = failed;
             this.selectable = false;
             this.focusable = false;
-            this.originalMinimum = editor.getLayoutNode().getMinHeight();
+            this.originalMinimum = { ...heightLayout(editor).getMinHeight() };
             this.placeholder = editor.placeholder;
             editor.parent!.add(this);
             editor.once('destroyed', this.detachOnDestroy);
@@ -114,7 +131,7 @@ export function createInlineGhost(
                 this.placeholder = editor.placeholder;
                 editor.placeholder = null;
             }
-            const node = editor.getLayoutNode();
+            const node = heightLayout(editor);
             const minimum = node.getMinHeight();
             // Preserve newer host layout changes instead of restoring stale settings.
             if (
@@ -217,7 +234,7 @@ export function createInlineGhost(
             editor.off('destroyed', this.detachOnDestroy);
             if (!editor.isDestroyed) {
                 if (editor.placeholder == null) editor.placeholder = this.placeholder;
-                const minimum = editor.getLayoutNode().getMinHeight();
+                const minimum = heightLayout(editor).getMinHeight();
                 if (
                     this.appliedMinimum !== undefined &&
                     minimum.unit === Yoga.Unit.Point &&

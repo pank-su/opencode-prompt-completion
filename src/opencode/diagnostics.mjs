@@ -33,11 +33,11 @@ export function completionStatus({ automatic, broken, state, stats, snapshot, ti
   const counters = stats ?? {};
   const lines = [
     `Mode: ${broken ? 'stopped after an error' : automatic === false ? 'manual' : 'automatic'}`,
-    `State: ${text(current.status) ?? 'idle'}`,
+    `State: ${broken ? 'error' : text(current.status) ?? 'idle'}`,
   ];
-  const reason = text(current.reason);
+  const reason = broken ? 'ui-runtime-error' : text(current.reason);
   if (reason != null) lines.push(`Reason: ${reason}`);
-  const error = text(current.error);
+  const error = broken ? 'The completion UI stopped after an error.' : text(current.error);
   if (error != null) lines.push(`Error: ${error}`);
   lines.push(
     `Prompt: ${snapshot?.presentable ? 'available' : 'hidden'} · requests: ${snapshot?.requestable ? 'available' : 'blocked'}`,

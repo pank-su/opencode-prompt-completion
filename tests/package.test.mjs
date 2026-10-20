@@ -8,7 +8,7 @@ const root = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 
 test('public package metadata, license and allowlisted files are self-contained', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '0.2.5');
+  assert.equal(pkg.version, '0.2.6');
   assert.equal(pkg.license, 'MIT');
   assert.equal(pkg.author, 'pank-su');
   assert.equal(pkg.private, true);
@@ -28,14 +28,14 @@ test('public package metadata, license and allowlisted files are self-contained'
   }
 });
 
-test('renderer peers are required at tested versions; the host SDK is development-only', () => {
+test('renderer peers cover both tested host versions; the host SDK is development-only', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.deepEqual(Object.keys(pkg.dependencies ?? {}), []);
   assert.equal(pkg.peerDependencies['@opencode/plugin'], undefined, 'the host provides the SDK; keep it development-only');
   assert.ok(pkg.devDependencies['@opencode/plugin']);
   assert.deepEqual(Object.keys(pkg.peerDependencies).sort(), ['@opentui/core', '@opentui/solid', 'solid-js']);
   for (const name of Object.keys(pkg.peerDependencies)) {
-    assert.equal(pkg.peerDependencies[name], pkg.devDependencies[name], name);
+    assert.equal(pkg.peerDependencies[name], name === 'solid-js' ? '1.9.12' : '>=0.5.17 <0.7', name);
     assert.notEqual(pkg.peerDependenciesMeta?.[name]?.optional, true, name);
   }
   for (const hook of ['preinstall', 'install', 'postinstall', 'prepare', 'prepack']) assert.equal(pkg.scripts[hook], undefined, hook);
